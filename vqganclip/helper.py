@@ -1,11 +1,13 @@
-from torch.nn import functional as F
-from torch import nn
-import torch
+import math
+import io
+
 from omegaconf import OmegaConf
 from PIL import Image
 import requests
-import math
-import io
+
+import torch
+from torch import nn
+from torch.nn import functional as F
 
 #submodules
 import os
@@ -74,6 +76,9 @@ class ReplaceGrad(torch.autograd.Function):
         return None, grad_in.sum_to_size(ctx.shape)
 
 
+replace_grad = ReplaceGrad.apply
+
+
 class ClampWithGrad(torch.autograd.Function):
     @staticmethod
     def forward(ctx, input, min, max):
@@ -88,11 +93,14 @@ class ClampWithGrad(torch.autograd.Function):
         return grad_in * (grad_in * (input - input.clamp(ctx.min, ctx.max)) >= 0), None, None
 
 
+clamp_with_grad = ClampWithGrad.apply
+
+
 def vector_quantize(x, codebook):
     d = x.pow(2).sum(dim=-1, keepdim=True) + codebook.pow(2).sum(dim=1) - 2 * x @ codebook.T
     indices = d.argmin(-1)
     x_q = F.one_hot(indices, codebook.shape[0]).to(d.dtype) @ codebook
-    return ReplaceGrad.apply(x_q, x)
+    return replace_grad(x_q, x)
 
 
 class Prompt(nn.Module):
@@ -107,7 +115,7 @@ class Prompt(nn.Module):
         embed_normed = F.normalize(self.embed.unsqueeze(0), dim=2)
         dists = input_normed.sub(embed_normed).norm(dim=2).div(2).arcsin().pow(2).mul(2)
         dists = dists * self.weight.sign()
-        return self.weight.abs() * ReplaceGrad.apply(dists, torch.maximum(dists, self.stop)).mean()
+        return self.weight.abs() * replace_grad(dists, torch.maximum(dists, self.stop)).mean()
 
 
 def fetch(url_or_path):
@@ -149,7 +157,7 @@ class MakeCutouts(nn.Module):
             offsety = torch.randint(0, sideY - size + 1, ())
             cutout = input[:, :, offsety:offsety + size, offsetx:offsetx + size]
             cutouts.append(resample(cutout, (self.cut_size, self.cut_size)))
-        return ClampWithGrad.apply(torch.cat(cutouts, dim=0), 0, 1)
+        return clamp_with_grad(torch.cat(cutouts, dim=0), 0, 1)
 
 
 def load_vqgan_model(config_path, checkpoint_path):
@@ -167,7 +175,6 @@ def load_vqgan_model(config_path, checkpoint_path):
         raise ValueError(f'unknown model type: {config.model.target}')
     del model.loss
     return model
-
 
 def load_img(path):
   return Image.open(path)
