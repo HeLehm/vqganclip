@@ -12,9 +12,9 @@ from IPython import display
 import sys 
 import os
 _clip_path = os.path.join(
-    os.path.dirname(os.path.dirname(
+    os.path.dirname(
         __file__
-    )),
+    ),
     "submodules",
     "CLIP"
 )

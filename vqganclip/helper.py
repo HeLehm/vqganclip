@@ -11,9 +11,9 @@ import io
 import os
 import sys
 _tamming_path = os.path.join(
-    os.path.dirname(os.path.dirname(
+    os.path.dirname(
         __file__
-    )),
+    ),
     "submodules",
     "taming_transformers"
 )
