@@ -1,0 +1,6 @@
+[submodule "submodules/CLIP"]
+	path = vqganclip/submodules/CLIP
+	url = https://github.com/openai/CLIP.git
+[submodule "submodules/taming_transformers"]
+	path = vqganclip/submodules/taming_transformers
+	url = https://github.com/CompVis/taming-transformers.git
