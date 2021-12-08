@@ -7,6 +7,7 @@ from PIL import Image
 import argparse
 from tqdm import tqdm
 from IPython import display
+import gc
 
 #submodules
 import sys 
@@ -198,3 +199,13 @@ class VQGANCLIP:
 
     def get_args(self):
         return self.args
+    
+    
+    def __del__(self):
+        """
+        cleanup
+        """
+        gc.collect()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
+        print("VQGANCLIP instance deleted")
